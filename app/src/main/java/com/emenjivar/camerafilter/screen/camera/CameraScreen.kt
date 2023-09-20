@@ -2,6 +2,7 @@ package com.emenjivar.camerafilter.screen.camera
 
 import android.Manifest
 import android.content.Context
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
@@ -10,7 +11,10 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -44,6 +48,9 @@ fun CameraScreen() {
             .requireLensFacing(lensFacing)
             .build()
     }
+    var camera by remember {
+        mutableStateOf<Camera?>(null)
+    }
 
     val permissionState = rememberPermissionState(
         permission = Manifest.permission.CAMERA,
@@ -60,7 +67,7 @@ fun CameraScreen() {
 
     LaunchedEffect(permissionState.status, lensFacing) {
         if (permissionState.status.isGranted) {
-            startCamera(
+            camera = startCamera(
                 context = context,
                 lifecycleOwner = lifecycleOwner,
                 cameraSelector = cameraSelector,
@@ -72,6 +79,9 @@ fun CameraScreen() {
     }
 
     CameraScreenLayout(
+        onToggleTorch = { enable ->
+            camera?.cameraControl?.enableTorch(enable)
+        },
         onTakePhoto = {},
         cameraContent = {
             AndroidView(
@@ -105,16 +115,17 @@ private suspend fun startCamera(
     preview: Preview,
     previewView: PreviewView,
     imageCapture: ImageCapture
-) {
+): Camera {
     val cameraProvider = context.getCameraProvider()
     cameraProvider.unbindAll()
-    cameraProvider.bindToLifecycle(
+    val camera = cameraProvider.bindToLifecycle(
         lifecycleOwner,
         cameraSelector,
         preview,
         imageCapture
     )
     preview.setSurfaceProvider(previewView.surfaceProvider)
+    return camera
 }
 
 private suspend fun Context.getCameraProvider(): ProcessCameraProvider =

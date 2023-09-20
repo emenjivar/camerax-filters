@@ -11,6 +11,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,9 +28,14 @@ import com.emenjivar.camerafilter.ui.theme.RealTimeCameraFilterTheme
 @Composable
 fun CameraScreenLayout(
     modifier: Modifier = Modifier,
+    onToggleTorch: (Boolean) -> Unit,
     onTakePhoto: () -> Unit,
     cameraContent: @Composable () -> Unit
 ) {
+    var isTorchEnabled by remember {
+        mutableStateOf(false)
+    }
+
     Scaffold(
         modifier = modifier
     ) { paddingValues ->
@@ -46,6 +55,13 @@ fun CameraScreenLayout(
                     onClick = onTakePhoto
                 ) {
                     Text(text = stringResource(R.string.button_take_photo))
+                }
+
+                Button(onClick = {
+                    onToggleTorch(!isTorchEnabled)
+                    isTorchEnabled = !isTorchEnabled
+                }) {
+                    Text(text = "Torch $isTorchEnabled")
                 }
             }
         }
@@ -69,6 +85,7 @@ private fun CameraScreenLayoutPreview() {
                     Text(text = "Camera should be displayed here")
                 }
             },
+            onToggleTorch = {},
             onTakePhoto = {}
         )
     }
