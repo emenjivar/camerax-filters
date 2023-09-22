@@ -29,6 +29,7 @@ import com.emenjivar.camerafilter.ui.theme.RealTimeCameraFilterTheme
 fun CameraScreenLayout(
     modifier: Modifier = Modifier,
     onToggleTorch: (Boolean) -> Unit,
+    onFlipCamera: () -> Unit,
     onTakePhoto: () -> Unit,
     cameraContent: @Composable () -> Unit
 ) {
@@ -63,6 +64,10 @@ fun CameraScreenLayout(
                 }) {
                     Text(text = "Torch $isTorchEnabled")
                 }
+
+                Button(onClick = onFlipCamera) {
+                    Text(text = "Flip")
+                }
             }
         }
     }
@@ -86,6 +91,7 @@ private fun CameraScreenLayoutPreview() {
                 }
             },
             onToggleTorch = {},
+            onFlipCamera = {},
             onTakePhoto = {}
         )
     }

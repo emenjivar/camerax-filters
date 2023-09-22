@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.CameraSelector.LensFacing
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,11 +41,11 @@ fun CameraScreen() {
     val context = LocalContext.current
     val dialogController = rememberCustomDialogController()
     val lifecycleOwner = LocalLifecycleOwner.current
-    val lensFacing = remember { CameraSelector.LENS_FACING_BACK }
+    var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
     val preview = Preview.Builder().build()
     val previewView = remember { PreviewView(context) }
     val imageCapture = remember { ImageCapture.Builder().build() }
-    val cameraSelector = remember {
+    val cameraSelector = remember(lensFacing) {
         CameraSelector.Builder()
             .requireLensFacing(lensFacing)
             .build()
@@ -82,6 +84,9 @@ fun CameraScreen() {
         onToggleTorch = { enable ->
             camera?.cameraControl?.enableTorch(enable)
         },
+        onFlipCamera = {
+            lensFacing = flip(lensFacing)
+        },
         onTakePhoto = {},
         cameraContent = {
             AndroidView(
@@ -106,6 +111,12 @@ fun CameraScreen() {
             onClick = {}
         )
     )
+}
+
+private fun flip(lensFacing: Int) = if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
+    CameraSelector.LENS_FACING_BACK
+} else {
+    CameraSelector.LENS_FACING_FRONT
 }
 
 private suspend fun startCamera(
