@@ -1,5 +1,6 @@
 package com.emenjivar.camerafilter.screen.camera
 
+import androidx.camera.core.TorchState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,14 +28,15 @@ import com.emenjivar.camerafilter.ui.theme.RealTimeCameraFilterTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraScreenLayout(
+    torchState: Int?,
     modifier: Modifier = Modifier,
     onToggleTorch: (Boolean) -> Unit,
     onFlipCamera: () -> Unit,
     onTakePhoto: () -> Unit,
     cameraContent: @Composable () -> Unit
 ) {
-    var isTorchEnabled by remember {
-        mutableStateOf(false)
+    var isTorchEnabled by remember(torchState) {
+        mutableStateOf(torchState == TorchState.ON)
     }
 
     Scaffold(
@@ -77,7 +79,7 @@ private val bottomControllersPadding = 16.dp
 
 @Composable
 @Preview
-private fun CameraScreenLayoutPreview() {
+private fun CameraScreenLayoutTorchOnPreview() {
     RealTimeCameraFilterTheme {
         CameraScreenLayout(
             cameraContent = {
@@ -90,6 +92,30 @@ private fun CameraScreenLayoutPreview() {
                     Text(text = "Camera should be displayed here")
                 }
             },
+            torchState = TorchState.ON,
+            onToggleTorch = {},
+            onFlipCamera = {},
+            onTakePhoto = {}
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun CameraScreenLayoutTorchOffPreview() {
+    RealTimeCameraFilterTheme {
+        CameraScreenLayout(
+            cameraContent = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "Camera should be displayed here")
+                }
+            },
+            torchState = TorchState.OFF,
             onToggleTorch = {},
             onFlipCamera = {},
             onTakePhoto = {}

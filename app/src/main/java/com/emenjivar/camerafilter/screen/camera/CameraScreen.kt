@@ -4,15 +4,16 @@ import android.Manifest
 import android.content.Context
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.CameraSelector.LensFacing
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
+import androidx.camera.core.TorchState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,10 +51,8 @@ fun CameraScreen() {
             .requireLensFacing(lensFacing)
             .build()
     }
-    var camera by remember {
-        mutableStateOf<Camera?>(null)
-    }
-
+    var camera by remember { mutableStateOf<Camera?>(null) }
+    val torchState = camera?.torchState()
     val permissionState = rememberPermissionState(
         permission = Manifest.permission.CAMERA,
         onPermissionResult = { isGranted ->
@@ -81,6 +80,7 @@ fun CameraScreen() {
     }
 
     CameraScreenLayout(
+        torchState = torchState?.value,
         onToggleTorch = { enable ->
             camera?.cameraControl?.enableTorch(enable)
         },
@@ -118,6 +118,10 @@ private fun flip(lensFacing: Int) = if (lensFacing == CameraSelector.LENS_FACING
 } else {
     CameraSelector.LENS_FACING_FRONT
 }
+
+@Composable
+private fun Camera.torchState() =
+    this.cameraInfo.torchState.observeAsState(initial = TorchState.OFF)
 
 private suspend fun startCamera(
     context: Context,
