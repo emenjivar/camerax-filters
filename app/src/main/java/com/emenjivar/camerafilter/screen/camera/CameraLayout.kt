@@ -1,5 +1,6 @@
 package com.emenjivar.camerafilter.screen.camera
 
+import android.annotation.SuppressLint
 import androidx.camera.core.TorchState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +12,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,7 +27,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.emenjivar.camerafilter.R
 import com.emenjivar.camerafilter.ui.theme.RealTimeCameraFilterTheme
+import com.emenjivar.camerafilter.ui.widget.RoundedButton
 
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraScreenLayout(
@@ -38,13 +43,43 @@ fun CameraScreenLayout(
     var isTorchEnabled by remember(torchState) {
         mutableStateOf(torchState == TorchState.ON)
     }
+    val torchIcon = remember(isTorchEnabled) {
+        if (isTorchEnabled) {
+            R.drawable.ic_flash_on
+        } else {
+            R.drawable.ic_flash_off
+        }
+    }
 
     Scaffold(
-        modifier = modifier
-    ) { paddingValues ->
+        modifier = modifier,
+        contentColor = Color.Transparent,
+        topBar = {
+            TopAppBar(
+                title = {},
+                navigationIcon = {
+                    RoundedButton(
+                        iconRes = R.drawable.ic_flip_camera,
+                        onClick = onFlipCamera
+                    )
+                },
+                actions = {
+                    RoundedButton(
+                        iconRes = torchIcon,
+                        onClick = {
+                            onToggleTorch(!isTorchEnabled)
+                            isTorchEnabled = !isTorchEnabled
+                        }
+                    )
+                },
+                colors = TopAppBarDefaults.smallTopAppBarColors(
+                    containerColor = Color.Transparent
+                )
+            )
+        }
+    ) {
         Box(
             modifier = Modifier
-                .padding(paddingValues)
                 .fillMaxSize()
         ) {
             cameraContent()
@@ -59,23 +94,13 @@ fun CameraScreenLayout(
                 ) {
                     Text(text = stringResource(R.string.button_take_photo))
                 }
-
-                Button(onClick = {
-                    onToggleTorch(!isTorchEnabled)
-                    isTorchEnabled = !isTorchEnabled
-                }) {
-                    Text(text = "Torch $isTorchEnabled")
-                }
-
-                Button(onClick = onFlipCamera) {
-                    Text(text = "Flip")
-                }
             }
         }
     }
 }
 
 private val bottomControllersPadding = 16.dp
+private val roundedButtonSize = 50.dp
 
 @Composable
 @Preview
