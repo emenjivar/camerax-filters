@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Real time camera filter"
 include(":app")
+include(":opencv")
