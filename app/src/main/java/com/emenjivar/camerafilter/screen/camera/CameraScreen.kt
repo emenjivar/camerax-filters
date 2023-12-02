@@ -12,7 +12,6 @@ import androidx.camera.core.Preview
 import androidx.camera.core.TorchState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -100,39 +99,38 @@ fun CameraScreen() {
         }
     }
 
-    Box {
-        CameraScreenLayout(
-            torchState = torchState?.value,
-            onToggleTorch = { enable ->
-                camera?.cameraControl?.enableTorch(enable)
-            },
-            onFlipCamera = {
-                lensFacing = flip(lensFacing)
-            },
-            onTakePhoto = {},
-            rawCameraPreview = { modifier ->
-                AndroidView(
-                    modifier = modifier,
-                    factory = { previewView }
-                )
-            },
-            filterCameraPreview = { modifier ->
-                AndroidView(
-                    factory = { context ->
-                        ImageView(context).apply {
-                            scaleType = ImageView.ScaleType.CENTER_CROP
-                        }
-                    },
-                    update = { view ->
-                        imageWithFilter?.let { safeImage ->
-                            view.setImageBitmap(safeImage)
-                        }
-                    },
-                    modifier = modifier
-                )
-            }
-        )
-    }
+    CameraScreenLayout(
+        torchState = torchState?.value,
+        onToggleTorch = { enable ->
+            camera?.cameraControl?.enableTorch(enable)
+        },
+        onFlipCamera = {
+            lensFacing = flip(lensFacing)
+        },
+        onTakePhoto = {},
+        rawCameraPreview = { modifier ->
+            AndroidView(
+                modifier = modifier,
+                factory = { previewView }
+            )
+        },
+        filterCameraPreview = { modifier ->
+            AndroidView(
+                factory = { context ->
+                    ImageView(context).apply {
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                    }
+                },
+                update = { view ->
+                    imageWithFilter?.let { safeImage ->
+                        view.setImageBitmap(safeImage)
+                    }
+                },
+                modifier = modifier
+            )
+        }
+    )
+
 
     CustomDialog(
         controller = dialogController,
