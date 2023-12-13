@@ -2,14 +2,16 @@ package com.emenjivar.camerafilter.screen.camera
 
 import android.Manifest
 import android.content.Context
+import android.graphics.Bitmap
+import android.widget.ImageView
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.core.TorchState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,7 +20,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -37,6 +38,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 @OptIn(ExperimentalPermissionsApi::class)
+@androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 @Composable
 fun CameraScreen() {
     val context = LocalContext.current
@@ -45,12 +47,29 @@ fun CameraScreen() {
     var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
     val preview = Preview.Builder().build()
     val previewView = remember { PreviewView(context) }
+
     val imageCapture = remember { ImageCapture.Builder().build() }
     val cameraSelector = remember(lensFacing) {
         CameraSelector.Builder()
             .requireLensFacing(lensFacing)
             .build()
     }
+    val executor = remember {
+        ContextCompat.getMainExecutor(context)
+    }
+    var imageWithFilter by remember {
+        mutableStateOf<Bitmap?>(null)
+    }
+    val imageAnalysis = remember {
+        ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build().apply {
+                setAnalyzer(executor, CustomImageAnalyzer(
+                    onDrawImage = { bitmap -> imageWithFilter = bitmap }
+                ))
+            }
+    }
+
     var camera by remember { mutableStateOf<Camera?>(null) }
     val torchState = camera?.torchState()
     val permissionState = rememberPermissionState(
@@ -65,6 +84,7 @@ fun CameraScreen() {
     LaunchedEffect(Unit) {
         permissionState.launchPermissionRequest()
     }
+    var enableGrayFilter by remember { mutableStateOf(false) }
 
     LaunchedEffect(permissionState.status, lensFacing) {
         if (permissionState.status.isGranted) {
@@ -74,27 +94,49 @@ fun CameraScreen() {
                 cameraSelector = cameraSelector,
                 preview = preview,
                 previewView = previewView,
-                imageCapture = imageCapture
+                imageCapture = imageCapture,
+                imageAnalysis = imageAnalysis
             )
         }
     }
 
     CameraScreenLayout(
         torchState = torchState?.value,
+        isFilterEnabled = enableGrayFilter,
         onToggleTorch = { enable ->
             camera?.cameraControl?.enableTorch(enable)
         },
         onFlipCamera = {
             lensFacing = flip(lensFacing)
         },
-        onTakePhoto = {},
-        cameraContent = {
+        onTakePhoto = {
+            enableGrayFilter = !enableGrayFilter
+        },
+        rawCameraPreview = { modifier ->
             AndroidView(
-                modifier = Modifier.fillMaxSize(),
+                modifier = modifier,
                 factory = { previewView }
             )
+        },
+        filterCameraPreview = { modifier ->
+            if (enableGrayFilter) {
+                AndroidView(
+                    factory = { context ->
+                        ImageView(context).apply {
+                            scaleType = ImageView.ScaleType.CENTER_CROP
+                        }
+                    },
+                    update = { view ->
+                        imageWithFilter?.let { safeImage ->
+                            view.setImageBitmap(safeImage)
+                        }
+                    },
+                    modifier = modifier
+                )
+            }
         }
     )
+
 
     CustomDialog(
         controller = dialogController,
@@ -129,7 +171,8 @@ private suspend fun startCamera(
     cameraSelector: CameraSelector,
     preview: Preview,
     previewView: PreviewView,
-    imageCapture: ImageCapture
+    imageCapture: ImageCapture,
+    imageAnalysis: ImageAnalysis
 ): Camera {
     val cameraProvider = context.getCameraProvider()
     cameraProvider.unbindAll()
@@ -137,6 +180,7 @@ private suspend fun startCamera(
         lifecycleOwner,
         cameraSelector,
         preview,
+        imageAnalysis,
         imageCapture
     )
     preview.setSurfaceProvider(previewView.surfaceProvider)

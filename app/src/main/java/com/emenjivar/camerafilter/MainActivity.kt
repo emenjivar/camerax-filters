@@ -9,10 +9,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.emenjivar.camerafilter.screen.camera.CameraScreen
 import com.emenjivar.camerafilter.ui.theme.RealTimeCameraFilterTheme
+import org.opencv.android.OpenCVLoader
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        OpenCVLoader.initDebug()
         setContent {
             RealTimeCameraFilterTheme {
                 // A surface container using the 'background' color from the theme

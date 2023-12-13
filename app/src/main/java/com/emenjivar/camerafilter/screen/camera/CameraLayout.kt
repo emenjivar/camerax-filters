@@ -29,16 +29,24 @@ import com.emenjivar.camerafilter.R
 import com.emenjivar.camerafilter.ui.theme.RealTimeCameraFilterTheme
 import com.emenjivar.camerafilter.ui.widget.RoundedButton
 
+/**
+ * @param rawCameraPreview original image preview directly from the camera.
+ *  This layout is rendered in the bottom of the layers.
+ * @param filterCameraPreview camera image preview but with some filters applied.
+ *  This layout is rendered in front of the cameraContent but behind cameraControls.
+ */
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraScreenLayout(
     torchState: Int?,
+    isFilterEnabled: Boolean,
     modifier: Modifier = Modifier,
     onToggleTorch: (Boolean) -> Unit,
     onFlipCamera: () -> Unit,
     onTakePhoto: () -> Unit,
-    cameraContent: @Composable () -> Unit
+    rawCameraPreview: @Composable (Modifier) -> Unit,
+    filterCameraPreview: @Composable (Modifier) -> Unit
 ) {
     var isTorchEnabled by remember(torchState) {
         mutableStateOf(torchState == TorchState.ON)
@@ -77,12 +85,20 @@ fun CameraScreenLayout(
                 )
             )
         }
-    ) {
+    ) { _ ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            cameraContent()
+            rawCameraPreview(
+                Modifier.fillMaxSize()
+            )
+            filterCameraPreview(
+                Modifier
+                    .fillMaxSize()
+                    .align(Alignment.BottomCenter)
+            )
+
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -92,7 +108,15 @@ fun CameraScreenLayout(
                 Button(
                     onClick = onTakePhoto
                 ) {
-                    Text(text = stringResource(R.string.button_take_photo))
+                    Text(
+                        text = stringResource(
+                            if (isFilterEnabled) {
+                                R.string.button_disable_filter
+                            } else {
+                                R.string.button_enable_filter
+                            }
+                        )
+                    )
                 }
             }
         }
@@ -100,14 +124,14 @@ fun CameraScreenLayout(
 }
 
 private val bottomControllersPadding = 16.dp
-private val roundedButtonSize = 50.dp
+private val filteredImageHeight = 200.dp
 
 @Composable
 @Preview
 private fun CameraScreenLayoutTorchOnPreview() {
     RealTimeCameraFilterTheme {
         CameraScreenLayout(
-            cameraContent = {
+            rawCameraPreview = {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -118,9 +142,11 @@ private fun CameraScreenLayoutTorchOnPreview() {
                 }
             },
             torchState = TorchState.ON,
+            isFilterEnabled = true,
             onToggleTorch = {},
             onFlipCamera = {},
-            onTakePhoto = {}
+            onTakePhoto = {},
+            filterCameraPreview = {}
         )
     }
 }
@@ -130,7 +156,7 @@ private fun CameraScreenLayoutTorchOnPreview() {
 private fun CameraScreenLayoutTorchOffPreview() {
     RealTimeCameraFilterTheme {
         CameraScreenLayout(
-            cameraContent = {
+            rawCameraPreview = {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -141,9 +167,11 @@ private fun CameraScreenLayoutTorchOffPreview() {
                 }
             },
             torchState = TorchState.OFF,
+            isFilterEnabled = false,
             onToggleTorch = {},
             onFlipCamera = {},
-            onTakePhoto = {}
+            onTakePhoto = {},
+            filterCameraPreview = {}
         )
     }
 }
