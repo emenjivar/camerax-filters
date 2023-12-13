@@ -9,6 +9,7 @@ import android.media.Image
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import org.opencv.android.Utils
+import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.core.Point
 import org.opencv.core.Size
@@ -20,34 +21,33 @@ class CustomImageAnalyzer(
     private val onDrawImage: (Bitmap) -> Unit
 ) : ImageAnalysis.Analyzer {
 
-    private var mat = Mat()
+    private val originalMat = Mat()
 
     override fun analyze(image: ImageProxy) {
         // Convert cameraX image to openCV mat
         val bitmap = image.image?.toBitmap()
-        Utils.bitmapToMat(bitmap, mat)
-
-        // Rotate the image 45 degrees
-        val centerX = mat.width() / 2.0
-        val centerY = mat.height() / 2.0
-        val rotation = Imgproc.getRotationMatrix2D(Point(centerX, centerY), -90.0, 1.0)
-        Imgproc.warpAffine(
-            mat,
-            mat,
-            rotation,
-            Size(mat.width().toDouble(), mat.height().toDouble())
-        )
+        Utils.bitmapToMat(bitmap, originalMat)
 
         // Convert to grayscale
-        Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGBA2GRAY)
+        val grayMat = Mat()
+        Imgproc.cvtColor(originalMat, grayMat, Imgproc.COLOR_RGBA2GRAY)
 
-        // Put the mat result on the original bitmap
-        Utils.matToBitmap(mat, bitmap)
+        // Rotate the image
+        val rotated = Mat()
+        Core.rotate(grayMat, rotated, Core.ROTATE_90_CLOCKWISE)
+
+        val finalBitmap = Bitmap.createBitmap(
+            rotated.width(),
+            rotated.height(),
+            Bitmap.Config.ARGB_8888
+        )
+
+        // Put on the bitmap
+        Utils.matToBitmap(rotated, finalBitmap)
+
         image.close()
-
-        bitmap?.let { safeGrayBitmap ->
-            onDrawImage(safeGrayBitmap)
-        }
+        originalMat.release()
+        onDrawImage(finalBitmap)
     }
 
     private fun Image.toBitmap(): Bitmap {

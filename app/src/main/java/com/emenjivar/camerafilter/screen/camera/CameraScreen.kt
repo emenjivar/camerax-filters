@@ -84,6 +84,7 @@ fun CameraScreen() {
     LaunchedEffect(Unit) {
         permissionState.launchPermissionRequest()
     }
+    var enableGrayFilter by remember { mutableStateOf(false) }
 
     LaunchedEffect(permissionState.status, lensFacing) {
         if (permissionState.status.isGranted) {
@@ -101,13 +102,16 @@ fun CameraScreen() {
 
     CameraScreenLayout(
         torchState = torchState?.value,
+        isFilterEnabled = enableGrayFilter,
         onToggleTorch = { enable ->
             camera?.cameraControl?.enableTorch(enable)
         },
         onFlipCamera = {
             lensFacing = flip(lensFacing)
         },
-        onTakePhoto = {},
+        onTakePhoto = {
+            enableGrayFilter = !enableGrayFilter
+        },
         rawCameraPreview = { modifier ->
             AndroidView(
                 modifier = modifier,
@@ -115,19 +119,21 @@ fun CameraScreen() {
             )
         },
         filterCameraPreview = { modifier ->
-            AndroidView(
-                factory = { context ->
-                    ImageView(context).apply {
-                        scaleType = ImageView.ScaleType.CENTER_CROP
-                    }
-                },
-                update = { view ->
-                    imageWithFilter?.let { safeImage ->
-                        view.setImageBitmap(safeImage)
-                    }
-                },
-                modifier = modifier
-            )
+            if (enableGrayFilter) {
+                AndroidView(
+                    factory = { context ->
+                        ImageView(context).apply {
+                            scaleType = ImageView.ScaleType.CENTER_CROP
+                        }
+                    },
+                    update = { view ->
+                        imageWithFilter?.let { safeImage ->
+                            view.setImageBitmap(safeImage)
+                        }
+                    },
+                    modifier = modifier
+                )
+            }
         }
     )
 

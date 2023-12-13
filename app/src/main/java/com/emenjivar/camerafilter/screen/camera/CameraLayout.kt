@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,6 +40,7 @@ import com.emenjivar.camerafilter.ui.widget.RoundedButton
 @Composable
 fun CameraScreenLayout(
     torchState: Int?,
+    isFilterEnabled: Boolean,
     modifier: Modifier = Modifier,
     onToggleTorch: (Boolean) -> Unit,
     onFlipCamera: () -> Unit,
@@ -96,8 +95,7 @@ fun CameraScreenLayout(
             )
             filterCameraPreview(
                 Modifier
-                    .fillMaxWidth()
-                    .height(filteredImageHeight)
+                    .fillMaxSize()
                     .align(Alignment.BottomCenter)
             )
 
@@ -110,7 +108,15 @@ fun CameraScreenLayout(
                 Button(
                     onClick = onTakePhoto
                 ) {
-                    Text(text = stringResource(R.string.button_take_photo))
+                    Text(
+                        text = stringResource(
+                            if (isFilterEnabled) {
+                                R.string.button_disable_filter
+                            } else {
+                                R.string.button_enable_filter
+                            }
+                        )
+                    )
                 }
             }
         }
@@ -136,6 +142,7 @@ private fun CameraScreenLayoutTorchOnPreview() {
                 }
             },
             torchState = TorchState.ON,
+            isFilterEnabled = true,
             onToggleTorch = {},
             onFlipCamera = {},
             onTakePhoto = {},
@@ -160,6 +167,7 @@ private fun CameraScreenLayoutTorchOffPreview() {
                 }
             },
             torchState = TorchState.OFF,
+            isFilterEnabled = false,
             onToggleTorch = {},
             onFlipCamera = {},
             onTakePhoto = {},
