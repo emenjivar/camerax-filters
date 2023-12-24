@@ -33,9 +33,11 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -68,6 +70,7 @@ fun CameraScreen() {
     val context = LocalContext.current
     val screenWidth = LocalConfiguration.current.screenWidthDp
     val lifecycleOwner = LocalLifecycleOwner.current
+    val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
 
     // Controllers
@@ -158,6 +161,7 @@ fun CameraScreen() {
             }.distinctUntilChanged()
             .onEach { index ->
                 selectedFilterIndex = index
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             }.launchIn(this)
 
         if (!listState.isScrollInProgress) {
