@@ -16,11 +16,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -160,9 +159,7 @@ fun CameraScreen() {
             .onEach { index ->
                 selectedFilterIndex = index
             }.launchIn(this)
-    }
 
-    LaunchedEffect(listState.isScrollInProgress, selectedFilter) {
         if (!listState.isScrollInProgress) {
             listState.animateScrollToItem(selectedFilterIndex)
         }
@@ -204,52 +201,46 @@ fun CameraScreen() {
             }
         },
         bottomControllers = { modifier ->
-            Column(modifier = modifier) {
-                Text(
-                    text = "Selected: ${stringResource(selectedFilter.string)}",
-                    color = Color.White,
-                    modifier = Modifier.background(Color.Black)
-                )
-                LazyRow(
-                    modifier = Modifier
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.25f),
-                                    Color.Black.copy(alpha = 0.75f),
-                                    Color.Black
-                                )
+            LazyRow(
+                modifier = modifier
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.25f),
+                                Color.Black.copy(alpha = 0.75f),
+                                Color.Black
                             )
+                        )
+                    ),
+                state = listState,
+                horizontalArrangement = Arrangement.spacedBy(bottomControlsSpacedBy),
+                contentPadding = PaddingValues(horizontal = extraScrollSpace)
+            ) {
+
+                items(
+                    items = CustomFilter.values().asList(),
+                    key = { it.ordinal }
+                ) { filter ->
+                    FilterBubble(
+                        modifier = Modifier.clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                            onClick = {
+                                coroutineScope.launch {
+                                    val index = CustomFilter.valueOf(filter.name).ordinal
+                                    listState.animateScrollToItem(index)
+                                }
+                            }
                         ),
-                    state = listState,
-                    horizontalArrangement = Arrangement.spacedBy(bottomControlsSpacedBy),
-                    contentPadding = PaddingValues(horizontal = extraScrollSpace)
-                ) {
-                    items(
-                        count = CustomFilter.values().size
-                    ) { index ->
-                        imageWithFilter?.let { safeGrayImage ->
-                            FilterBubble(
-                                modifier = Modifier.clickable(
-                                    interactionSource = interactionSource,
-                                    indication = null,
-                                    onClick = {
-                                        coroutineScope.launch {
-                                            listState.animateScrollToItem(index)
-                                        }
-                                    }
-                                ),
-                                image = safeGrayImage,
-                                text = stringResource(CustomFilter.values()[index].string)
-                            )
-                        }
-                    }
+                        image = imageWithFilter,
+                        text = stringResource(filter.string),
+                        selected = filter == selectedFilter
+                    )
                 }
             }
         }
     )
-
 
     CustomDialog(
         controller = dialogController,

@@ -20,12 +20,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 
+/**
+ * A composable for rendering an small pre-visualization bubble of a filter.
+ * @param image The filtered image displayed inside the bubble.
+ * @param text Optional text with the name of the filter. Pass null to omit the text.
+ * @param selected Indicates whether the filter is selected. Changes the border color accordingly.
+ * @param modifier Modifier for styling the composable.
+ */
 @Composable
 fun FilterBubble(
-    image: Bitmap,
+    image: Bitmap?,
     text: String?,
+    selected: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val ringColor = if (selected) {
+        Color.Yellow
+    } else {
+        Color.Gray
+    }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -47,7 +61,7 @@ fun FilterBubble(
             modifier = Modifier
                 .size(bubbleSize)
                 .clip(CircleShape)
-                .border(width = bubbleBorderSize, color = Color.Gray, shape = CircleShape)
+                .border(width = bubbleBorderSize, color = ringColor, shape = CircleShape)
                 .background(color = Color.White, shape = CircleShape)
         ) {
             AndroidView(
