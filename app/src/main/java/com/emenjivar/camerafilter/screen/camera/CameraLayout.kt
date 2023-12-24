@@ -3,12 +3,9 @@ package com.emenjivar.camerafilter.screen.camera
 import android.annotation.SuppressLint
 import androidx.camera.core.TorchState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -22,9 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.emenjivar.camerafilter.R
 import com.emenjivar.camerafilter.ui.theme.RealTimeCameraFilterTheme
 import com.emenjivar.camerafilter.ui.widget.RoundedButton
@@ -46,7 +41,8 @@ fun CameraScreenLayout(
     onFlipCamera: () -> Unit,
     onTakePhoto: () -> Unit,
     rawCameraPreview: @Composable (Modifier) -> Unit,
-    filterCameraPreview: @Composable (Modifier) -> Unit
+    filterCameraPreview: @Composable (Modifier) -> Unit,
+    bottomControllers: @Composable BoxScope.(Modifier) -> Unit
 ) {
     var isTorchEnabled by remember(torchState) {
         mutableStateOf(torchState == TorchState.ON)
@@ -99,32 +95,13 @@ fun CameraScreenLayout(
                     .align(Alignment.BottomCenter)
             )
 
-            Row(
-                modifier = Modifier
+            bottomControllers(
+                Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = bottomControllersPadding),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Button(
-                    onClick = onTakePhoto
-                ) {
-                    Text(
-                        text = stringResource(
-                            if (isFilterEnabled) {
-                                R.string.button_disable_filter
-                            } else {
-                                R.string.button_enable_filter
-                            }
-                        )
-                    )
-                }
-            }
+            )
         }
     }
 }
-
-private val bottomControllersPadding = 16.dp
-private val filteredImageHeight = 200.dp
 
 @Composable
 @Preview
@@ -146,7 +123,8 @@ private fun CameraScreenLayoutTorchOnPreview() {
             onToggleTorch = {},
             onFlipCamera = {},
             onTakePhoto = {},
-            filterCameraPreview = {}
+            filterCameraPreview = {},
+            bottomControllers = {}
         )
     }
 }
@@ -171,7 +149,8 @@ private fun CameraScreenLayoutTorchOffPreview() {
             onToggleTorch = {},
             onFlipCamera = {},
             onTakePhoto = {},
-            filterCameraPreview = {}
+            filterCameraPreview = {},
+            bottomControllers = {}
         )
     }
 }

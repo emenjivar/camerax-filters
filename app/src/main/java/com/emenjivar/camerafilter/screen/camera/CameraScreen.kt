@@ -12,6 +12,15 @@ import androidx.camera.core.Preview
 import androidx.camera.core.TorchState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,9 +29,16 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
@@ -31,9 +47,15 @@ import com.emenjivar.camerafilter.ext.settingsIntent
 import com.emenjivar.camerafilter.ui.components.CustomDialog
 import com.emenjivar.camerafilter.ui.components.CustomDialogAction
 import com.emenjivar.camerafilter.ui.components.rememberCustomDialogController
+import com.emenjivar.camerafilter.ui.widget.FilterBubble
+import com.emenjivar.camerafilter.ui.widget.bubbleSize
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -41,13 +63,27 @@ import kotlin.coroutines.suspendCoroutine
 @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 @Composable
 fun CameraScreen() {
+    // Compose variables
     val context = LocalContext.current
-    val dialogController = rememberCustomDialogController()
+    val screenWidth = LocalConfiguration.current.screenWidthDp
     val lifecycleOwner = LocalLifecycleOwner.current
-    var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
-    val preview = Preview.Builder().build()
-    val previewView = remember { PreviewView(context) }
 
+    // Controllers
+    val dialogController = rememberCustomDialogController()
+    val listState = rememberLazyListState()
+    val interactionSource = remember { MutableInteractionSource() }
+    val permissionState = rememberPermissionState(
+        permission = Manifest.permission.CAMERA,
+        onPermissionResult = { isGranted ->
+            if (!isGranted) {
+                dialogController.show()
+            }
+        }
+    )
+
+    // Remembered values
+    var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
+    val previewView = remember { PreviewView(context) }
     val imageCapture = remember { ImageCapture.Builder().build() }
     val cameraSelector = remember(lensFacing) {
         CameraSelector.Builder()
@@ -69,23 +105,28 @@ fun CameraScreen() {
                 ))
             }
     }
-
     var camera by remember { mutableStateOf<Camera?>(null) }
-    val torchState = camera?.torchState()
-    val permissionState = rememberPermissionState(
-        permission = Manifest.permission.CAMERA,
-        onPermissionResult = { isGranted ->
-            if (!isGranted) {
-                dialogController.show()
-            }
-        }
-    )
+    var enableGrayFilter by remember { mutableStateOf(false) }
 
+    // Calculated
+    val extraScrollSpace = remember {
+        (screenWidth / 2).dp - bubbleSize / 2 - bottomControlsSpacedBy / 2
+    }
+    val maxOffsetPx = with(LocalDensity.current) {
+        (bubbleSize + bottomControlsSpacedBy).toPx()
+    }
+    val middle = remember { maxOffsetPx / 2f }
+    var selectedItem by remember { mutableIntStateOf(DEFAULT_FILTER_INDEX) }
+
+    val preview = Preview.Builder().build()
+
+    // States
+    val torchState = camera?.torchState()
+
+    // Launched
     LaunchedEffect(Unit) {
         permissionState.launchPermissionRequest()
     }
-    var enableGrayFilter by remember { mutableStateOf(false) }
-
     LaunchedEffect(permissionState.status, lensFacing) {
         if (permissionState.status.isGranted) {
             camera = startCamera(
@@ -98,6 +139,22 @@ fun CameraScreen() {
                 imageAnalysis = imageAnalysis
             )
         }
+    }
+
+    // Calculate the nearest index to the center
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .map { data ->
+                val (index, offset) = data
+                if (offset >= 0 && offset <= middle) {
+                    index
+                } else {
+                    index + 1
+                }
+            }.distinctUntilChanged()
+            .onEach { selected ->
+                selectedItem = selected
+            }.launchIn(this)
     }
 
     CameraScreenLayout(
@@ -134,6 +191,79 @@ fun CameraScreen() {
                     modifier = modifier
                 )
             }
+        },
+        bottomControllers = { modifier ->
+            Column(modifier = modifier) {
+                Text(
+                    text = "Selected: $selectedItem",
+                    color = Color.White,
+                    modifier = Modifier.background(Color.Black)
+                )
+                LazyRow(
+                    modifier = Modifier
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.25f),
+                                    Color.Black.copy(alpha = 0.75f),
+                                    Color.Black
+                                )
+                            )
+                        ),
+                    state = listState,
+                    horizontalArrangement = Arrangement.spacedBy(bottomControlsSpacedBy),
+                    contentPadding = PaddingValues(horizontal = extraScrollSpace)
+                ) {
+                    item {
+                        imageWithFilter?.let { safeGrayImage ->
+                            FilterBubble(
+                                modifier = Modifier.clickable(
+                                    interactionSource = interactionSource,
+                                    indication = null,
+                                    onClick = { enableGrayFilter = false }
+                                ),
+                                image = safeGrayImage,
+                                text = "Normal"
+                            )
+                        }
+                    }
+
+                    item {
+                        imageWithFilter?.let { safeGrayImage ->
+                            FilterBubble(
+                                modifier = Modifier.clickable(
+                                    interactionSource = interactionSource,
+                                    indication = null,
+                                    onClick = { enableGrayFilter = true }
+                                ),
+                                image = safeGrayImage,
+                                text = "Gray"
+                            )
+                        }
+                    }
+
+                    item {
+                        imageWithFilter?.let { safeGrayImage ->
+                            FilterBubble(
+                                image = safeGrayImage,
+                                text = "Sepia"
+                            )
+                        }
+                    }
+
+                    repeat(55) {
+                        item {
+                            imageWithFilter?.let { safeGrayImage ->
+                                FilterBubble(
+                                    image = safeGrayImage,
+                                    text = "Vintage"
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     )
 
@@ -154,6 +284,9 @@ fun CameraScreen() {
         )
     )
 }
+
+private val bottomControlsSpacedBy = 4.dp
+private const val DEFAULT_FILTER_INDEX = 0
 
 private fun flip(lensFacing: Int) = if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
     CameraSelector.LENS_FACING_BACK
