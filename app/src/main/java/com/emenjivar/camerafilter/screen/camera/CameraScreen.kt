@@ -28,6 +28,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -56,6 +57,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -67,6 +69,7 @@ fun CameraScreen() {
     val context = LocalContext.current
     val screenWidth = LocalConfiguration.current.screenWidthDp
     val lifecycleOwner = LocalLifecycleOwner.current
+    val coroutineScope = rememberCoroutineScope()
 
     // Controllers
     val dialogController = rememberCustomDialogController()
@@ -107,6 +110,10 @@ fun CameraScreen() {
     }
     var camera by remember { mutableStateOf<Camera?>(null) }
     var enableGrayFilter by remember { mutableStateOf(false) }
+    var selectedFilterIndex by remember { mutableIntStateOf(DEFAULT_FILTER_INDEX) }
+    val selectedFilter = remember(selectedFilterIndex) {
+        CustomFilter.values()[selectedFilterIndex]
+    }
 
     // Calculated
     val extraScrollSpace = remember {
@@ -116,12 +123,10 @@ fun CameraScreen() {
         (bubbleSize + bottomControlsSpacedBy).toPx()
     }
     val middle = remember { maxOffsetPx / 2f }
-    var selectedItem by remember { mutableIntStateOf(DEFAULT_FILTER_INDEX) }
-
-    val preview = Preview.Builder().build()
 
     // States
     val torchState = camera?.torchState()
+    val preview = Preview.Builder().build()
 
     // Launched
     LaunchedEffect(Unit) {
@@ -152,9 +157,15 @@ fun CameraScreen() {
                     index + 1
                 }
             }.distinctUntilChanged()
-            .onEach { selected ->
-                selectedItem = selected
+            .onEach { index ->
+                selectedFilterIndex = index
             }.launchIn(this)
+    }
+
+    LaunchedEffect(listState.isScrollInProgress, selectedFilter) {
+        if (!listState.isScrollInProgress) {
+            listState.animateScrollToItem(selectedFilterIndex)
+        }
     }
 
     CameraScreenLayout(
@@ -195,7 +206,7 @@ fun CameraScreen() {
         bottomControllers = { modifier ->
             Column(modifier = modifier) {
                 Text(
-                    text = "Selected: $selectedItem",
+                    text = "Selected: ${stringResource(selectedFilter.string)}",
                     color = Color.White,
                     modifier = Modifier.background(Color.Black)
                 )
@@ -215,51 +226,23 @@ fun CameraScreen() {
                     horizontalArrangement = Arrangement.spacedBy(bottomControlsSpacedBy),
                     contentPadding = PaddingValues(horizontal = extraScrollSpace)
                 ) {
-                    item {
+                    items(
+                        count = CustomFilter.values().size
+                    ) { index ->
                         imageWithFilter?.let { safeGrayImage ->
                             FilterBubble(
                                 modifier = Modifier.clickable(
                                     interactionSource = interactionSource,
                                     indication = null,
-                                    onClick = { enableGrayFilter = false }
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            listState.animateScrollToItem(index)
+                                        }
+                                    }
                                 ),
                                 image = safeGrayImage,
-                                text = "Normal"
+                                text = stringResource(CustomFilter.values()[index].string)
                             )
-                        }
-                    }
-
-                    item {
-                        imageWithFilter?.let { safeGrayImage ->
-                            FilterBubble(
-                                modifier = Modifier.clickable(
-                                    interactionSource = interactionSource,
-                                    indication = null,
-                                    onClick = { enableGrayFilter = true }
-                                ),
-                                image = safeGrayImage,
-                                text = "Gray"
-                            )
-                        }
-                    }
-
-                    item {
-                        imageWithFilter?.let { safeGrayImage ->
-                            FilterBubble(
-                                image = safeGrayImage,
-                                text = "Sepia"
-                            )
-                        }
-                    }
-
-                    repeat(55) {
-                        item {
-                            imageWithFilter?.let { safeGrayImage ->
-                                FilterBubble(
-                                    image = safeGrayImage,
-                                    text = "Vintage"
-                                )
-                            }
                         }
                     }
                 }
