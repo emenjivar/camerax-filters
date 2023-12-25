@@ -13,10 +13,13 @@ import androidx.camera.core.TorchState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -27,10 +30,11 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -42,6 +46,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.emenjivar.camerafilter.R
@@ -50,6 +55,8 @@ import com.emenjivar.camerafilter.ui.components.CustomDialog
 import com.emenjivar.camerafilter.ui.components.CustomDialogAction
 import com.emenjivar.camerafilter.ui.components.rememberCustomDialogController
 import com.emenjivar.camerafilter.ui.widget.FilterBubble
+import com.emenjivar.camerafilter.ui.widget.bubbleBorderSize
+import com.emenjivar.camerafilter.ui.widget.bubbleShape
 import com.emenjivar.camerafilter.ui.widget.bubbleSize
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -58,7 +65,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -71,7 +77,6 @@ fun CameraScreen() {
     val screenWidth = LocalConfiguration.current.screenWidthDp
     val lifecycleOwner = LocalLifecycleOwner.current
     val haptic = LocalHapticFeedback.current
-    val coroutineScope = rememberCoroutineScope()
 
     // Controllers
     val dialogController = rememberCustomDialogController()
@@ -119,7 +124,7 @@ fun CameraScreen() {
 
     // Calculated
     val extraScrollSpace = remember {
-        (screenWidth / 2).dp - bubbleSize / 2 - bottomControlsSpacedBy / 2
+        (screenWidth / 2f).dp - bubbleSize / 2f
     }
     val maxOffsetPx = with(LocalDensity.current) {
         (bubbleSize + bottomControlsSpacedBy).toPx()
@@ -148,7 +153,7 @@ fun CameraScreen() {
         }
     }
 
-    // Calculate the nearest index to the center
+    // Select the element positioned in the center of the screen
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
             .map { data ->
@@ -163,10 +168,22 @@ fun CameraScreen() {
                 selectedFilterIndex = index
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             }.launchIn(this)
+    }
 
-        if (!listState.isScrollInProgress) {
-            listState.animateScrollToItem(selectedFilterIndex)
-        }
+    // Center the element closest to the center
+    LaunchedEffect(listState.isScrollInProgress, selectedFilterIndex) {
+        snapshotFlow { listState.isScrollInProgress to selectedFilterIndex }
+            .distinctUntilChanged { old, new ->
+                val (isScrollingOld, indexOld) = old
+                val (isScrollingNew, indexNew) = new
+                isScrollingOld != isScrollingNew && indexOld != indexNew
+            }
+            .onEach { data ->
+                val (isScrolling, index) = data
+                if (!isScrolling) {
+                    listState.animateScrollToItem(index)
+                }
+            }.launchIn(this)
     }
 
     CameraScreenLayout(
@@ -205,8 +222,9 @@ fun CameraScreen() {
             }
         },
         bottomControllers = { modifier ->
-            LazyRow(
+            Box(
                 modifier = modifier
+                    .fillMaxWidth()
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
@@ -216,32 +234,41 @@ fun CameraScreen() {
                                 Color.Black
                             )
                         )
-                    ),
-                state = listState,
-                horizontalArrangement = Arrangement.spacedBy(bottomControlsSpacedBy),
-                contentPadding = PaddingValues(horizontal = extraScrollSpace)
-            ) {
-
-                items(
-                    items = CustomFilter.values().asList(),
-                    key = { it.ordinal }
-                ) { filter ->
-                    FilterBubble(
-                        modifier = Modifier.clickable(
-                            interactionSource = interactionSource,
-                            indication = null,
-                            onClick = {
-                                coroutineScope.launch {
-                                    val index = CustomFilter.valueOf(filter.name).ordinal
-                                    listState.animateScrollToItem(index)
-                                }
-                            }
-                        ),
-                        image = imageWithFilter,
-                        text = stringResource(filter.string),
-                        selected = filter == selectedFilter
                     )
+            ) {
+                LazyRow(
+                    modifier = Modifier
+                        .zIndex(Z_INDEX_BUBBLE_FILTER),
+                    state = listState,
+                    horizontalArrangement = Arrangement.spacedBy(bottomControlsSpacedBy),
+                    contentPadding = PaddingValues(horizontal = extraScrollSpace)
+                ) {
+
+                    items(
+                        items = CustomFilter.values().asList(),
+                        key = { it.ordinal }
+                    ) { filter ->
+                        FilterBubble(
+                            image = imageWithFilter,
+                            text = stringResource(filter.string),
+                            selected = false
+                        )
+                    }
                 }
+
+                // Selector indicator
+                Box(
+                    modifier = Modifier
+                        .clip(bubbleShape)
+                        .border(
+                            width = bubbleBorderSize,
+                            color = Color.Yellow,
+                            shape = bubbleShape
+                        )
+                        .align(Alignment.BottomCenter)
+                        .size(bubbleSize)
+                        .zIndex(Z_INDEX_BUBBLE_FILTER)
+                )
             }
         }
     )
@@ -265,6 +292,9 @@ fun CameraScreen() {
 
 private val bottomControlsSpacedBy = 4.dp
 private const val DEFAULT_FILTER_INDEX = 0
+
+private const val Z_INDEX_BUBBLE_FILTER = 0f
+private const val Z_INDEX_BUBBLE_FILTER_SELECTOR = 1f
 
 private fun flip(lensFacing: Int) = if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
     CameraSelector.LENS_FACING_BACK

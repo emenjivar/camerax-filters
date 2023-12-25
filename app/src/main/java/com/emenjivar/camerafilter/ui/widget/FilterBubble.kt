@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,7 +38,6 @@ fun FilterBubble(
     } else {
         Color.Gray
     }
-
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -60,9 +58,9 @@ fun FilterBubble(
         Box(
             modifier = Modifier
                 .size(bubbleSize)
-                .clip(CircleShape)
-                .border(width = bubbleBorderSize, color = ringColor, shape = CircleShape)
-                .background(color = Color.White, shape = CircleShape)
+                .clip(bubbleShape)
+                .border(width = bubbleBorderSize, color = ringColor, shape = bubbleShape)
+                .background(color = Color.White, shape = bubbleShape)
         ) {
             AndroidView(
                 factory = { context ->
@@ -79,4 +77,6 @@ fun FilterBubble(
 }
 
 val bubbleSize = 70.dp
-private val bubbleBorderSize = 2.dp
+val bubbleBorderSize = 2.dp
+private val bubbleRoundedCorner = 15.dp
+val bubbleShape = RoundedCornerShape(bubbleRoundedCorner)
