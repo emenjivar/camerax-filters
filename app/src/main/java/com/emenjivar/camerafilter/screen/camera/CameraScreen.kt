@@ -14,6 +14,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -65,6 +67,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -77,6 +80,7 @@ fun CameraScreen() {
     val screenWidth = LocalConfiguration.current.screenWidthDp
     val lifecycleOwner = LocalLifecycleOwner.current
     val haptic = LocalHapticFeedback.current
+    val coroutineScope = rememberCoroutineScope()
 
     // Controllers
     val dialogController = rememberCustomDialogController()
@@ -118,9 +122,6 @@ fun CameraScreen() {
     var camera by remember { mutableStateOf<Camera?>(null) }
     var enableGrayFilter by remember { mutableStateOf(false) }
     var selectedFilterIndex by remember { mutableIntStateOf(DEFAULT_FILTER_INDEX) }
-    val selectedFilter = remember(selectedFilterIndex) {
-        CustomFilter.values()[selectedFilterIndex]
-    }
 
     // Calculated
     val extraScrollSpace = remember {
@@ -171,17 +172,12 @@ fun CameraScreen() {
     }
 
     // Center the element closest to the center
-    LaunchedEffect(listState.isScrollInProgress, selectedFilterIndex) {
-        snapshotFlow { listState.isScrollInProgress to selectedFilterIndex }
-            .distinctUntilChanged { old, new ->
-                val (isScrollingOld, indexOld) = old
-                val (isScrollingNew, indexNew) = new
-                isScrollingOld != isScrollingNew && indexOld != indexNew
-            }
-            .onEach { data ->
-                val (isScrolling, index) = data
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }
+            .distinctUntilChanged()
+            .onEach { isScrolling ->
                 if (!isScrolling) {
-                    listState.animateScrollToItem(index)
+                    listState.animateScrollToItem(selectedFilterIndex)
                 }
             }.launchIn(this)
     }
@@ -249,6 +245,15 @@ fun CameraScreen() {
                         key = { it.ordinal }
                     ) { filter ->
                         FilterBubble(
+                            modifier = Modifier.clickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        listState.animateScrollToItem(filter.ordinal)
+                                    }
+                                }
+                            ),
                             image = imageWithFilter,
                             text = stringResource(filter.string),
                             selected = false
@@ -267,7 +272,7 @@ fun CameraScreen() {
                         )
                         .align(Alignment.BottomCenter)
                         .size(bubbleSize)
-                        .zIndex(Z_INDEX_BUBBLE_FILTER)
+                        .zIndex(Z_INDEX_BUBBLE_FILTER_SELECTOR)
                 )
             }
         }
