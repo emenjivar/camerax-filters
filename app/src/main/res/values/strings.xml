@@ -8,4 +8,10 @@
     <string name="button_close">Close</string>
     <string name="button_enable_filter">Enable filter</string>
     <string name="button_disable_filter">Disable filter</string>
+
+    <!-- filters -->
+    <string name="filter_type_normal">Normal</string>
+    <string name="filter_type_gray">Gray</string>
+    <string name="filter_type_sepia">Sepia</string>
+    <string name="filer_type_vintage">Vintage</string>
 </resources>
