@@ -1,0 +1,29 @@
+config:
+  validation: true
+  warningsAsErrors: false
+
+complexity:
+  active: true
+
+  LongParameterList:
+    functionThreshold: 8
+    ignoreAnnotated:
+      - Composable
+
+  LongMethod:
+    ignoreAnnotated:
+      - Composable
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated:
+      - Composable
+
+style:
+  UnusedPrivateMember:
+    ignoreAnnotated:
+      - Preview
+  MagicNumber:
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+

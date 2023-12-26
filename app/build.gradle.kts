@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("io.gitlab.arturbosch.detekt") version "1.23.4"
 }
 
 android {
@@ -86,4 +87,10 @@ dependencies {
 
     // OpenCV module
     implementation(project(":opencv"))
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom("$projectDir/config/detekt.yml")
 }
