@@ -184,15 +184,11 @@ fun CameraScreen() {
 
     CameraScreenLayout(
         torchState = torchState?.value,
-        isFilterEnabled = enableGrayFilter,
         onToggleTorch = { enable ->
             camera?.cameraControl?.enableTorch(enable)
         },
         onFlipCamera = {
             lensFacing = flip(lensFacing)
-        },
-        onTakePhoto = {
-            enableGrayFilter = !enableGrayFilter
         },
         rawCameraPreview = { modifier ->
             AndroidView(
@@ -201,7 +197,7 @@ fun CameraScreen() {
             )
         },
         filterCameraPreview = { modifier ->
-            if (enableGrayFilter) {
+            if (enableGrayFilter || true) {
                 AndroidView(
                     factory = { context ->
                         ImageView(context).apply {

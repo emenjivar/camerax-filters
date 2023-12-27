@@ -35,11 +35,9 @@ import com.emenjivar.camerafilter.ui.widget.RoundedButton
 @Composable
 fun CameraScreenLayout(
     torchState: Int?,
-    isFilterEnabled: Boolean,
     modifier: Modifier = Modifier,
     onToggleTorch: (Boolean) -> Unit,
     onFlipCamera: () -> Unit,
-    onTakePhoto: () -> Unit,
     rawCameraPreview: @Composable (Modifier) -> Unit,
     filterCameraPreview: @Composable (Modifier) -> Unit,
     bottomControllers: @Composable BoxScope.(Modifier) -> Unit
@@ -119,10 +117,8 @@ private fun CameraScreenLayoutTorchOnPreview() {
                 }
             },
             torchState = TorchState.ON,
-            isFilterEnabled = true,
             onToggleTorch = {},
             onFlipCamera = {},
-            onTakePhoto = {},
             filterCameraPreview = {},
             bottomControllers = {}
         )
@@ -145,10 +141,8 @@ private fun CameraScreenLayoutTorchOffPreview() {
                 }
             },
             torchState = TorchState.OFF,
-            isFilterEnabled = false,
             onToggleTorch = {},
             onFlipCamera = {},
-            onTakePhoto = {},
             filterCameraPreview = {},
             bottomControllers = {}
         )
