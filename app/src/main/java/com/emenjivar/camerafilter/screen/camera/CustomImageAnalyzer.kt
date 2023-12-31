@@ -18,56 +18,54 @@ import java.io.ByteArrayOutputStream
 
 @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 class CustomImageAnalyzer(
-    private val onDrawImage: (Bitmap) -> Unit
+    private val onDrawImage: (
+        filtered: Bitmap,
+        originalLowQuality: Bitmap?
+    ) -> Unit
 ) : ImageAnalysis.Analyzer {
 
     private val originalMat = Mat()
 
     override fun analyze(image: ImageProxy) {
         // Convert cameraX image to openCV mat
-        val bitmap = image.image?.toBitmap()
+
+        val bitmap = image.toBitmap()
         Utils.bitmapToMat(bitmap, originalMat)
+
+        val thumbnailMat = Mat()
+
+        val thumbnailBitmap = image.toBitmap()
+        Utils.bitmapToMat(thumbnailBitmap, thumbnailMat)
 
         // Convert to grayscale
         val grayMat = Mat()
         Imgproc.cvtColor(originalMat, grayMat, Imgproc.COLOR_RGBA2GRAY)
 
         // Rotate the image
-        val rotated = Mat()
-        Core.rotate(grayMat, rotated, Core.ROTATE_90_CLOCKWISE)
+        val rotatedGrayMat = Mat()
+        Core.rotate(grayMat, rotatedGrayMat, Core.ROTATE_90_CLOCKWISE)
 
-        val finalBitmap = Bitmap.createBitmap(
-            rotated.width(),
-            rotated.height(),
+        val rotatedThumbnailMat = Mat()
+        Core.rotate(thumbnailMat, rotatedThumbnailMat, Core.ROTATE_90_CLOCKWISE)
+
+        val outputBitmap = Bitmap.createBitmap(
+            rotatedGrayMat.width(),
+            rotatedGrayMat.height(),
             Bitmap.Config.ARGB_8888
         )
 
-        // Put on the bitmap
-        Utils.matToBitmap(rotated, finalBitmap)
+        val outputThumbnailBitmap = Bitmap.createBitmap(
+            rotatedThumbnailMat.width(),
+            rotatedThumbnailMat.height(),
+            Bitmap.Config.ARGB_8888
+        )
+
+        // Put final mats on output bitmaps
+        Utils.matToBitmap(rotatedGrayMat, outputBitmap)
+        Utils.matToBitmap(rotatedThumbnailMat, outputThumbnailBitmap)
 
         image.close()
         originalMat.release()
-        onDrawImage(finalBitmap)
-    }
-
-    private fun Image.toBitmap(): Bitmap {
-        val yBuffer = planes[0].buffer // Y
-        val vuBuffer = planes[2].buffer // YU
-        val ySize = yBuffer.remaining()
-        val vuSize = vuBuffer.remaining()
-
-        val nv21 = ByteArray(ySize + vuSize)
-        yBuffer.get(nv21, 0, ySize)
-        vuBuffer.get(nv21, ySize, vuSize)
-
-        val yuvImage = YuvImage(nv21, ImageFormat.NV21, width, height, null)
-        val out = ByteArrayOutputStream()
-        yuvImage.compressToJpeg(Rect(0, 0, yuvImage.width, yuvImage.height), BITMAP_QUALITY, out)
-        val imageBytes = out.toByteArray()
-        return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-    }
-
-    companion object {
-        private const val BITMAP_QUALITY = 100
+        onDrawImage(outputBitmap, outputThumbnailBitmap)
     }
 }

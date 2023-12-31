@@ -110,18 +110,26 @@ fun CameraScreen() {
     var imageWithFilter by remember {
         mutableStateOf<Bitmap?>(null)
     }
+    var lowQualityBitmap by remember {
+        mutableStateOf<Bitmap?>(null)
+    }
     val imageAnalysis = remember {
         ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build().apply {
                 setAnalyzer(executor, CustomImageAnalyzer(
-                    onDrawImage = { bitmap -> imageWithFilter = bitmap }
+                    onDrawImage = { filteredBitmap, originalBitmap ->
+                        imageWithFilter = filteredBitmap
+                        lowQualityBitmap = originalBitmap
+                    }
                 ))
             }
     }
     var camera by remember { mutableStateOf<Camera?>(null) }
-    var enableGrayFilter by remember { mutableStateOf(false) }
     var selectedFilterIndex by remember { mutableIntStateOf(DEFAULT_FILTER_INDEX) }
+    val selectedFilter = remember(selectedFilterIndex) {
+        CustomFilter.values()[selectedFilterIndex]
+    }
 
     // Calculated
     val extraScrollSpace = remember {
@@ -197,7 +205,7 @@ fun CameraScreen() {
             )
         },
         filterCameraPreview = { modifier ->
-            if (enableGrayFilter || true) {
+            if (selectedFilter != CustomFilter.NORMAL) {
                 AndroidView(
                     factory = { context ->
                         ImageView(context).apply {
@@ -205,9 +213,7 @@ fun CameraScreen() {
                         }
                     },
                     update = { view ->
-                        imageWithFilter?.let { safeImage ->
-                            view.setImageBitmap(safeImage)
-                        }
+                        view.setImageBitmap(imageWithFilter)
                     },
                     modifier = modifier
                 )
@@ -250,7 +256,10 @@ fun CameraScreen() {
                                     }
                                 }
                             ),
-                            image = imageWithFilter,
+                            image = when (filter) {
+                                CustomFilter.NORMAL -> lowQualityBitmap
+                                else -> imageWithFilter
+                            },
                             text = stringResource(filter.string),
                             selected = false
                         )
