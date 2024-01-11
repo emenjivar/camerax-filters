@@ -3,6 +3,7 @@ package com.emenjivar.camerafilter.screen.camera
 import android.Manifest
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import android.widget.ImageView
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
@@ -113,22 +114,37 @@ fun CameraScreen() {
     var lowQualityBitmap by remember {
         mutableStateOf<Bitmap?>(null)
     }
-    val imageAnalysis = remember {
-        ImageAnalysis.Builder()
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .build().apply {
-                setAnalyzer(executor, CustomImageAnalyzer(
-                    onDrawImage = { filteredBitmap, originalBitmap ->
-                        imageWithFilter = filteredBitmap
-                        lowQualityBitmap = originalBitmap
-                    }
-                ))
-            }
-    }
     var camera by remember { mutableStateOf<Camera?>(null) }
     var selectedFilterIndex by remember { mutableIntStateOf(DEFAULT_FILTER_INDEX) }
     val selectedFilter = remember(selectedFilterIndex) {
         CustomFilter.values()[selectedFilterIndex]
+    }
+    val imageAnalysis = remember(selectedFilter) {
+        ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build().apply {
+                fun onDrawImage(filtered: Bitmap, original: Bitmap?) {
+                    imageWithFilter = filtered
+                    lowQualityBitmap = original
+                }
+
+                val analyzer = when (selectedFilter) {
+                    CustomFilter.GRAY -> GrayScaleAnalyzer(::onDrawImage)
+                    CustomFilter.SEPIA -> SepiaAnalyzer(::onDrawImage)
+                    else -> null
+                }
+
+                if (analyzer != null) {
+                    setAnalyzer(
+                        executor,
+                        analyzer
+                    )
+                }
+            }
+    }
+
+    LaunchedEffect(selectedFilter) {
+        Log.wtf("CameraScreen", "filter has changed: $selectedFilter")
     }
 
     // Calculated
@@ -148,7 +164,7 @@ fun CameraScreen() {
     LaunchedEffect(Unit) {
         permissionState.launchPermissionRequest()
     }
-    LaunchedEffect(permissionState.status, lensFacing) {
+    LaunchedEffect(permissionState.status, lensFacing, selectedFilter) {
         if (permissionState.status.isGranted) {
             camera = startCamera(
                 context = context,
